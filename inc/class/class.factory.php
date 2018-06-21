@@ -18,6 +18,7 @@ class BDTOS_Factory {
   public function __construct() {
     
     include_once( 'class.object.php' );
+    include_once( 'class.user.php' );
     
     $this->add_hooks();
   
