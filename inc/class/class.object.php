@@ -320,7 +320,6 @@ class BDTOS_Object {
     return false;
     
   }
-
  
   
 }
