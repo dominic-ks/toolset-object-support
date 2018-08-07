@@ -171,13 +171,7 @@ class BDTOS_Object {
   
   private function get_bespoke_fields() {
     
-    $fields = array(
-      '_wpcf_belongs_game-week_id',
-      '_wpcf_belongs_game_id',
-      '_wpcf_belongs_prediction-set_id',
-      '_wpcf_belongs_team_id',
-      'wpcf-status',
-    );
+    $fields = array();
     
     return $fields;
     
