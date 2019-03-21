@@ -303,6 +303,13 @@ class BDTOS_Object {
   **/
   
   public function cred_submit_complete( $post_id , $form_data ) {
+  	
+  	 if(isset($_POST['_snax_format']) && $_POST['_snax_format'] == 'text') {
+  	 	add_post_meta( $post_id, '_snax_format', 'text' );
+  	 	
+  	 }
+  	 
+  	 
     
     return false;
     
@@ -318,6 +325,19 @@ class BDTOS_Object {
   public function after_post_save( $post_id ) {
     
     return false;
+    
+  }
+  
+  
+  /**
+  *
+  * Run after a child post is saved
+  *
+  **/
+  
+  public function after_child_post_saved( $post ) {
+    
+    return true;
     
   }
  
