@@ -49,4 +49,58 @@ class BDTOS_User {
   }
   
   
+  /**
+  *
+  * Get user objects
+  *
+  **/
+  
+  public function get_user_objects( $args ) {
+    
+    //default args
+    $args = wp_parse_args( $args , array(
+      'type' => null,
+      'parent_id' => null,
+      'relationship_slug' => null,
+      'output_object' => 'BDTOS_Object', 
+      'args' => array(), 
+      'link' => false,
+    ));
+    
+    //standard query args
+    $query_args['posts_per_page'] = -1;
+    $query_args['post_type'] = $args['type'];
+    $query_args['author'] = $this->user_id;
+    
+    //if we're looking for child objects then we'll add this
+    if( $args['parent_id'] !== null && $args['relationship_slug'] !== null ) {
+      $query_args['meta_query'][] = array(
+        'key' => '_wpcf_belongs_' . $args['relationship_slug'] . '_id',
+        'value' => $args['parent_id'],
+      );
+    }
+    
+    //if we have args, merge them
+    if( ! empty( $args['args'] ) ) {
+      $query_args = array_merge( $query_args , $args['args'] );
+    }
+    
+    //run the query
+    $linked_object_query = new WP_Query( $query_args );
+    
+    $objects = $linked_object_query->get_posts();
+    
+    $objects_array = array();
+    
+    foreach( $objects as $object ) {
+      
+      $objects_array[] = new $args['output_object']( $object->ID );
+      
+    }
+    
+    return $objects_array;
+    
+  }
+  
+  
 }

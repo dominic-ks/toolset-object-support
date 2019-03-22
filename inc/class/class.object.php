@@ -286,12 +286,23 @@ class BDTOS_Object {
     $objects_array = array();
     
     foreach( $objects as $object ) {
-      
       $objects_array[] = new $output_object( $object->ID );
-      
     }
     
     return $objects_array;
+    
+  }
+  
+  
+  /**
+  *
+  * Link objects
+  *
+  **/
+  
+  public function link_with_object( $id , $relationship_slug , $this_is_child = true ) {
+    
+    return update_post_meta( $this->ID , '_wpcf_belongs_' . $relationship_slug . '_id' , $id );
     
   }
   
