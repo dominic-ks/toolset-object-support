@@ -69,6 +69,9 @@ class BDTOS_User {
       'link' => false,
     ));
     
+    $relationships = toolset_get_related_post_types( 'parent' , $args['type'] );
+    $args['relationship_slug'] = $relationships[ $args['relationship_slug'] ][0];
+    
     //standard query args
     $query_args['posts_per_page'] = -1;
     $query_args['post_type'] = $args['type'];
@@ -77,7 +80,7 @@ class BDTOS_User {
     //if we're looking for child objects then we'll add this
     if( $args['parent_id'] !== null && $args['relationship_slug'] !== null ) {
       $query_args['toolset_relationships'][] = array(
-        'role' => 'parent',
+        'role' => 'child',
         'related_to' => $args['parent_id'],
         'relationship' => $args['relationship_slug'],
       );

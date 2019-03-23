@@ -172,8 +172,11 @@ class BDTOS_Object {
   private function get_bespoke_fields() {
     
     $fields = array(
-      'tac-dog-family',
-      'wpcf-handler-id',
+      '_wpcf_belongs_game-week_id',
+      '_wpcf_belongs_game_id',
+      '_wpcf_belongs_prediction-set_id',
+      '_wpcf_belongs_team_id',
+      'wpcf-status',
     );
     
     return $fields;
@@ -249,9 +252,18 @@ class BDTOS_Object {
   *
   **/
   
-  public function get_parent_id( $parent_type ) {
+  public function get_parent_id( $parent_type ) { 
     
-    return wpcf_pr_post_get_belongs( $this->ID , $parent_type );
+    $relationships = $this->get_linked_object_types( 'parent' );
+    
+    if( count( $relationships ) === 0 ) {
+      return false;
+    }
+    
+    $relationship_slugs = $relationships[ $parent_type ];
+    $relationship_slug = $relationship_slugs[0];
+    
+    return toolset_get_related_post( $this->ID , $relationship_slug );
     
   }
   
@@ -320,13 +332,70 @@ class BDTOS_Object {
   *
   **/
   
-  public function link_with_object( $id , $relationship_slug , $this_is_child = true ) {
+  public function link_with_object( $id , $type , $this_is_child = true ) {
     
-    if( ! $this_is_child ) {
-      return toolset_connect_posts( $relationship_slug , $this->ID , $id );
+    if( $this_is_child ) {
+      $link_types = 'parent';
     }
     
-    return toolset_connect_posts( $relationship_slug , $id , $this->ID );
+    if( ! $this_is_child ) {
+      $link_types = 'child';
+    }
+    
+    $relationships = $this->get_linked_object_types( $link_types );
+    
+    if( count( $relationships ) === 0 ) {
+      return false;
+    }
+    
+    $relationship_slugs = $relationships[ $type ];
+    
+    foreach( $relationship_slugs as $relationship_slug ) {
+    
+      if( ! $this_is_child ) {
+        return toolset_connect_posts( $relationship_slug , $this->ID , $id );
+      }
+
+      return toolset_connect_posts( $relationship_slug , $id , $this->ID );
+      
+    }
+    
+  }
+  
+  
+  /**
+  *
+  * Remove the link with this post and another
+  *
+  **/
+  
+  public function unlink_from_post( $id , $type , $this_is_child = true ) {
+    
+    if( $this_is_child ) {
+      $link_types = 'parent';
+    }
+    
+    if( ! $this_is_child ) {
+      $link_types = 'child';
+    }
+    
+    $relationships = $this->get_linked_object_types( $link_types );
+    
+    if( count( $relationships ) === 0 ) {
+      return false;
+    }
+    
+    $relationship_slugs = $relationships[ $type ];
+    
+    foreach( $relationship_slugs as $relationship_slug ) {
+    
+      if( ! $this_is_child ) {
+        return toolset_disconnect_posts( $relationship_slug , $this->ID , $id );
+      }
+
+      return toolset_disconnect_posts( $relationship_slug , $id , $this->ID );
+      
+    }
     
   }
   
