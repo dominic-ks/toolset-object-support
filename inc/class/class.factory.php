@@ -95,31 +95,15 @@ class BDTOS_Factory {
   
   /**
   *
-  * Dump registered post type classes
-  *
-  **/
-  
-  public function dump_types() {
-    
-    var_dump( apply_filters( 'bdtos_object_types' , array() ) );
-    
-  }
-  
-  
-  /**
-  *
   * Register classes by post type
   *
   **/
   
   public function register_class_names() {
-    
     $this->object_types = apply_filters( 'bdtos_object_types' , array() );
-    
   }
   
   
 }
 
 $bdtos_factory = new BDTOS_Factory;
-$auto_cred = new Auto_Cred;

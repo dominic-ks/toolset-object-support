@@ -76,11 +76,9 @@ class BDTOS_Object {
   *
   **/
   
-  private function load_custom_fields() {
+  public function load_custom_fields() {
     
-    global $auto_cred;
-    
-    $fields = $auto_cred->get_all_fields( get_post_type( $this->ID ) );
+    $fields = $this->get_all_fields();
     $custom_fields = array();
     
     if( empty( $fields ) ) {
@@ -170,17 +168,8 @@ class BDTOS_Object {
   **/
   
   private function get_bespoke_fields() {
-    
-    $fields = array(
-      '_wpcf_belongs_game-week_id',
-      '_wpcf_belongs_game_id',
-      '_wpcf_belongs_prediction-set_id',
-      '_wpcf_belongs_team_id',
-      'wpcf-status',
-    );
-    
+    $fields = array();
     return $fields;
-    
   }
   
   
@@ -206,7 +195,7 @@ class BDTOS_Object {
         *
         **/
         
-        update_post_meta( $this->ID , $field , $_POST[ $field ] );
+        update_post_meta( $this->ID , $field , $_REQUEST[ $field ] );
         
         /**
         *
@@ -271,6 +260,8 @@ class BDTOS_Object {
   /**
   *
   * Get linked objects
+  *
+  * @todo re-write this function because it's args are terrible
   *
   **/
   
@@ -451,6 +442,87 @@ class BDTOS_Object {
     return toolset_get_related_post( $this->ID , $type . '-' . get_post_type( $this->ID ) );
     
   }
+	
+	
+	/**
+	*
+	* Get all the field groups
+	*
+	**/
+	
+	public function get_all_field_groups() {
+		
+		$args = array(
+			'posts_per_page' => -1,
+			'post_type' => 'wp-types-group',
+			'meta_query' => array(
+				'relation' => 'OR',
+        array(
+          'key' => '_wp_types_group_post_types',
+          'value' => get_post_type( $this->ID ),
+          'compare' => 'LIKE',
+        ),
+			),
+		);
+		
+		foreach( $this->get_object_terms() as $term ) {
+			
+			$args['meta_query'][] = array(
+				'key' => '_wp_types_group_terms',
+				'value' => ',' . $term->term_id . ',',
+				'compare' => 'LIKE',
+			);
+			
+		}
+		
+		return get_posts( $args );
+		
+	}
+	
+	
+	/**
+	*
+	* Get all the fields for this post
+	*
+	**/
+	
+	public function get_all_fields() {
+		
+		$field_groups = $this->get_all_field_groups();
+		
+		foreach( $field_groups as $field_group ) {
+			$fields[ $field_group->ID ] = get_post_meta( $field_group->ID , '_wp_types_group_fields' , true );
+		}
+    
+    
+		
+		return $fields;
+		
+	}
+	
+	
+	/**
+	*
+	* Get the current object's taxonomies
+	*
+	**/
+	
+	private function get_object_taxonomies() {
+		global $post;
+		return get_object_taxonomies( get_post_type( $post ) );
+	}
+	
+	
+	/**
+	*
+	* Get the current object's terms
+	*
+	**/
+	
+	private function get_object_terms() {
+		$taxonomies = $this->get_object_taxonomies();
+		return wp_get_object_terms( get_the_ID() , $taxonomies );
+	}
  
   
 }
