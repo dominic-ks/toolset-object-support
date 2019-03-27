@@ -308,6 +308,7 @@ class BDTOS_Object {
       }
       
     }
+    
         
     $linked_object_query = new WP_Query( $args );
     
