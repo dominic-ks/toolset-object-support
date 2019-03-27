@@ -3,8 +3,8 @@
 /**
 *
 * Plugin Name: Toolset Object Support
-* Plugin URI: https://www.bedevious.co.uk/
-* Description: NB - current version developed for The Agility Club
+* Plugin URI: https://github.com/dominic-ks/toolset-object-support
+* Description: This plugin houses provides a structure for common functions required when working with objects for post types created with Toolset Types
 * Version: 0.2.0
 * Author: Be Devious Web Development
 * Author URI: Plugin URI: https://www.bedevious.co.uk/
