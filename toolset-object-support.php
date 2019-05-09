@@ -5,7 +5,7 @@
 * Plugin Name: Toolset Object Support
 * Plugin URI: https://www.bedevious.co.uk/
 * Description: TBC
-* Version: 0.1.0
+* Version: 0.1.2
 * Author: Be Devious Web Development
 * Author URI: Plugin URI: https://www.bedevious.co.uk/
 * License: TBC
