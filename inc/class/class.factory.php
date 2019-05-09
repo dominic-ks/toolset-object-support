@@ -42,6 +42,9 @@ class BDTOS_Factory {
     //register post types and classes
     add_action( 'init' , array( $this , 'register_class_names' ) , 10 );
     
+    //after a child post is saved
+    add_action( 'wpcf_relationship_save_child' , array( $this , 'after_child_post_saved' ) , 999 , 2 );
+    
   }
   
   
@@ -72,6 +75,21 @@ class BDTOS_Factory {
     $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
     $object = new $object_type( $post_id );
     $object->after_post_save( $post_id );
+    
+  }
+  
+  
+  /**
+  *
+  * Take action when a post is saved, generically
+  *
+  **/
+  
+  public function after_child_post_saved( $post_id ) {
+    
+    $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
+    $object = new $object_type( $post_id );
+    $object->after_child_post_saved( $post_id );
     
   }
   

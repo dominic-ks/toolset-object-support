@@ -4,11 +4,19 @@
 *
 * Plugin Name: Toolset Object Support
 * Plugin URI: https://www.bedevious.co.uk/
+<<<<<<< HEAD
 * Description: NB - current version developed for The Agility Club
 * Version: 0.2.0
 * Author: Be Devious Web Development
 * Author URI: Plugin URI: https://www.bedevious.co.uk/
 * License: GNU GENERAL PUBLIC LICENSE V3
+=======
+* Description: TBC
+* Version: 0.1.2
+* Author: Be Devious Web Development
+* Author URI: Plugin URI: https://www.bedevious.co.uk/
+* License: TBC
+>>>>>>> 0.1.2
 *
 **/
 
