@@ -282,7 +282,7 @@ class BDTOS_Object {
     
     $cache_check = $this->get_cached_request( $cache_args );
     
-    if( $cache_check !== false ) {
+    if( $cache_check !== false && apply_filters( 'bdtos_return_cache' , true ) ) {
       return $cache_check;
     }
     
