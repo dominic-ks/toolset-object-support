@@ -483,6 +483,32 @@ class BDTOS_Object {
   
   /**
   *
+  * After child post save
+  *
+  **/
+  
+  public function after_child_post_saved( $post_id ) {
+    
+    return false;
+    
+  }
+  
+  
+  /**
+  *
+  * After WP All Import save
+  *
+  **/
+  
+  public function pmxi_saved_post( $post_id ) {
+    
+    return false;
+    
+  }
+  
+  
+  /**
+  *
   * Get the linked object types
   *
   **/
