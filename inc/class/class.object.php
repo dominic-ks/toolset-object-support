@@ -400,12 +400,15 @@ class BDTOS_Object {
     foreach( $relationship_slugs as $relationship_slug ) {
     
       if( ! $this_is_child ) {
-        return toolset_connect_posts( $relationship_slug , $this->ID , $id );
+        $result = toolset_connect_posts( $relationship_slug , $this->ID , $id );
       }
 
-      return toolset_connect_posts( $relationship_slug , $id , $this->ID );
+      $result = toolset_connect_posts( $relationship_slug , $id , $this->ID );
       
     }
+    
+    $this->clear_cache();
+    return $result;
     
   }
   
@@ -437,12 +440,17 @@ class BDTOS_Object {
     foreach( $relationship_slugs as $relationship_slug ) {
     
       if( ! $this_is_child ) {
-        return toolset_disconnect_posts( $relationship_slug , $this->ID , $id );
+        $result = toolset_disconnect_posts( $relationship_slug , $this->ID , $id );
       }
 
-      return toolset_disconnect_posts( $relationship_slug , $id , $this->ID );
+      $result = toolset_disconnect_posts( $relationship_slug , $id , $this->ID );
       
     }
+    
+    $former_parent = new BDTOS_Object( $id );
+    $former_parent->clear_cache();
+    
+    return $result;
     
   }
   
@@ -531,6 +539,43 @@ class BDTOS_Object {
     $key = 'bdtos-cache-' . hash_hmac( 'md5' , json_encode( $args ) , TOOLSET_CASH_SALT );
     
     return update_post_meta( $this->ID , $key , $value );
+    
+  }
+  
+  
+  /**
+  *
+  * Clear all caches
+  *
+  **/
+  
+  public function clear_cache( $parents = true ) {
+    
+    global $wpdb;
+    
+    //first clear the cache for this object
+    $sql = "DELETE  FROM `wp_postmeta` WHERE `post_id` = " . $this->ID . " AND `meta_key` LIKE '%bdtos-cache-%'";
+    $wpdb->query( $sql );
+    
+    //then initiate the same for it's parents
+    $relationships = $this->get_linked_object_types( 'parent' );
+    
+    if( count( $relationships ) === 0 ) {
+      return false;
+    }
+    
+    foreach( $relationships as $post_type => $relationship ) {
+      
+      $parent = $this->get_parent_id( $post_type );
+      
+      if( $parent == 0 ) {
+        continue;
+      }
+      
+      $parent_object = gih_get_bdtos_object( $parent );
+      $parent_object->clear_cache();
+      
+    }
     
   }
  

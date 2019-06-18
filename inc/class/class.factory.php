@@ -39,6 +39,9 @@ class BDTOS_Factory {
     //take action when a post is saved, not by CRED
     add_action( 'save_post' , array( $this , 'after_post_save' ) , 999 , 1 );
     
+    //take action when a post is saved by the WP All Import plugin
+    add_action( 'pmxi_saved_post' , array( $this , 'pmxi_saved_post' ) , 999 , 1 );
+    
     //register post types and classes
     add_action( 'init' , array( $this , 'register_class_names' ) , 10 );
     
@@ -60,6 +63,7 @@ class BDTOS_Factory {
     $object = new $object_type( $post_id );
     $object->save_linked_field_values();
     $object->cred_submit_complete( $post_id , $form_data );
+    $object->clear_cache();
     
   }
   
@@ -75,6 +79,7 @@ class BDTOS_Factory {
     $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
     $object = new $object_type( $post_id );
     $object->after_post_save( $post_id );
+    $object->clear_cache();
     
   }
   
@@ -90,6 +95,23 @@ class BDTOS_Factory {
     $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
     $object = new $object_type( $post_id );
     $object->after_child_post_saved( $post_id );
+    $object->clear_cache();
+    
+  }
+  
+  
+  /**
+  *
+  * Take action when a post is updated by WP All Import
+  *
+  **/
+  
+  public function pmxi_saved_post( $post_id ) {
+    
+    $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
+    $object = new $object_type( $post_id );
+    $object->pmxi_saved_post( $post_id );
+    $object->clear_cache();
     
   }
   
