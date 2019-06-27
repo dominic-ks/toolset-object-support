@@ -37,7 +37,7 @@ class BDTOS_Object {
   *
   **/
   
-  private function init() {
+  public function init() {
     
     return false;
     
@@ -282,7 +282,7 @@ class BDTOS_Object {
     
     $cache_check = $this->get_cached_request( $cache_args );
     
-    if( $cache_check !== false && apply_filters( 'bdtos_return_cache' , true ) ) {
+    if( $cache_check !== false ) {
       return $cache_check;
     }
     
@@ -294,7 +294,10 @@ class BDTOS_Object {
       $parent_type = get_post_type( $this->ID );
     }
     
-    $args['posts_per_page'] = -1;
+    if( ! isset( $args['posts_per_page'] ) ) {
+      $args['posts_per_page'] = -1;
+    }
+    
     $args['post_type'] = $type;
     
     /**
@@ -540,6 +543,10 @@ class BDTOS_Object {
   **/
   
   public function get_cached_request( $args = array() ) {
+    
+    if( ! apply_filters( 'bdtos_return_cache' , true ) ) {
+      return false;
+    }
     
     $key = 'bdtos-cache-' . hash_hmac( 'md5' , json_encode( $args ) , TOOLSET_CASH_SALT );
     
