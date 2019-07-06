@@ -110,6 +110,11 @@ class BDTOS_Factory {
     
     $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
     $object = new $object_type( $post_id );
+    
+    if( ! method_exists( $object , 'pmxi_saved_post' ) ) {
+      return;
+    }
+    
     $object->pmxi_saved_post( $post_id );
     $object->clear_cache();
     
