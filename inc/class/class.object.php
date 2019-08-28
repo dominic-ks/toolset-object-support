@@ -37,7 +37,7 @@ class BDTOS_Object {
   *
   **/
   
-  private function init() {
+  public function init() {
     
     return false;
     
@@ -249,6 +249,10 @@ class BDTOS_Object {
       return false;
     }
     
+    if( $parent_type === '' || ! $parent_type ) {
+      return false;
+    }
+    
     $relationship_slugs = $relationships[ $parent_type ];
     $relationship_slug = $relationship_slugs[0];
     
@@ -420,6 +424,53 @@ class BDTOS_Object {
   
   /**
   *
+  * Take action on REST GET
+  *
+  **/
+  
+  public function rest_pre_echo_response( $response , $object , $request ) {
+    return $response;
+  }
+  
+  
+  /**
+  *
+  * Take action on REST create / update
+  *
+  **/
+  
+  public function rest_post_created_updated( $post , $request , $new ) {
+    return true;
+  }
+  
+  
+  /**
+  *
+  * Take action after a post is deleted
+  *
+  **/
+  
+  public function after_delete_post( $post_id ) {
+    
+    $relationships = $this->get_linked_object_types();
+    
+    if( count( $relationships ) !== 0 ) {
+      foreach( $relationships as $type => $relationship_info ) {
+        
+        $children_objects = $this->get_linked_objects( $type );
+        
+        foreach( $children_objects as $child_object ) {
+          wp_delete_post( $child_object->ID );
+        }
+        
+      }
+    }
+    
+  }
+  
+  
+  /**
+  *
   * Get the linked object types
   *
   **/
@@ -489,12 +540,12 @@ class BDTOS_Object {
 	public function get_all_fields() {
 		
 		$field_groups = $this->get_all_field_groups();
+    
+    $fields = array();
 		
 		foreach( $field_groups as $field_group ) {
 			$fields[ $field_group->ID ] = get_post_meta( $field_group->ID , '_wp_types_group_fields' , true );
 		}
-    
-    
 		
 		return $fields;
 		

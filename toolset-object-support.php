@@ -36,3 +36,24 @@ function bdtos_enqueue_styles_and_scripts() {
 }
 
 add_action( 'wp_enqueue_scripts', 'bdtos_enqueue_styles_and_scripts' );
+
+
+/**
+*
+* Get BDTOS Object
+*
+**/
+
+function bdtos_get_bdtos( $id ) {
+  
+  $types = apply_filters( 'bdtos_object_types' , array() );
+  
+  $type = 'BDTOS_Object';
+  
+  if( isset( $types[ get_post_type( $id ) ] ) ) {
+    $type = $types[ get_post_type( $id ) ];
+  }
+  
+  return new $type( $id );
+  
+}

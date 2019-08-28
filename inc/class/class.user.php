@@ -45,9 +45,18 @@ class BDTOS_User {
   **/
   
   public function get_custom_field( $key , $single = true ) {
-    
     return get_user_meta( $this->user_id , 'wpcf-' . $key , $single );
-    
+  }
+  
+  
+  /**
+  *
+  * Set a user's custom field value
+  *
+  **/
+  
+  public function update_custom_field( $key , $value ) {
+    return update_user_meta( $this->user_id , 'wpcf-' . $key , $value );
   }
   
   
