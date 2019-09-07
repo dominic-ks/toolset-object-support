@@ -167,9 +167,8 @@ class BDTOS_Object {
   *
   **/
   
-  private function get_bespoke_fields() {
-    $fields = array();
-    return $fields;
+  public function get_bespoke_fields() {
+    return apply_filters( 'bdtos_get_bespoke_fields' , array() );
   }
   
   
@@ -253,6 +252,10 @@ class BDTOS_Object {
       return false;
     }
     
+    if( ! isset( $relationships[ $parent_type ] ) ) {
+      return false;
+    }
+    
     $relationship_slugs = $relationships[ $parent_type ];
     $relationship_slug = $relationship_slugs[0];
     
@@ -271,6 +274,20 @@ class BDTOS_Object {
   
   public function get_linked_objects( $type = null , $parent_type = null , $output_object = 'BDTOS_Object' , $args = array() , $link = false ) {
     
+    $cache_args = array(
+      'type' => $type,
+      'parent_type' => $parent_type,
+      'output_object' => $output_object,
+      'args' => $args,
+      'link' => $link,
+    );
+    
+    $cache_check = $this->get_cached_request( $cache_args );
+    
+    if( $cache_check !== false ) {
+      return $cache_check;
+    }
+    
     if( ! $type ) {
       $type = 'any';
     } 
@@ -279,7 +296,10 @@ class BDTOS_Object {
       $parent_type = get_post_type( $this->ID );
     }
     
-    $args['posts_per_page'] = -1;
+    if( ! isset( $args['posts_per_page'] ) ) {
+      $args['posts_per_page'] = -1;
+    }
+    
     $args['post_type'] = $type;
     
     /**
@@ -303,7 +323,6 @@ class BDTOS_Object {
       }
       
     }
-    
         
     $linked_object_query = new WP_Query( $args );
     
@@ -317,7 +336,44 @@ class BDTOS_Object {
       
     }
     
+    $this->cache_request( $cache_args , $objects_array );
+    
     return $objects_array;
+    
+  }
+  
+  
+  /**
+  *
+  * Get Toolset relationship query array
+  *
+  **/
+  
+  public function get_toolset_replationship_query_array( $type = null , $parent_type = null ) {
+    
+    if( ! $parent_type ) {
+      $parent_type = get_post_type( $this->ID );
+    }
+    
+    $relationships = $this->get_linked_object_types();
+    
+    if( count( $relationships ) === 0 ) {
+      return array();
+    }
+    
+    $relationships_query = array();
+    
+    foreach( $relationships[ $type ] as $relationship_slug ) {
+
+      $relationships_query[] = array(
+        'role' => 'child',
+        'related_to' => $this->ID,
+        'relationship' => $relationship_slug,
+      );
+
+    }
+    
+    return $relationships_query;
     
   }
   
@@ -349,12 +405,15 @@ class BDTOS_Object {
     foreach( $relationship_slugs as $relationship_slug ) {
     
       if( ! $this_is_child ) {
-        return toolset_connect_posts( $relationship_slug , $this->ID , $id );
+        $result = toolset_connect_posts( $relationship_slug , $this->ID , $id );
       }
 
-      return toolset_connect_posts( $relationship_slug , $id , $this->ID );
+      $result = toolset_connect_posts( $relationship_slug , $id , $this->ID );
       
     }
+    
+    $this->clear_cache();
+    return $result;
     
   }
   
@@ -386,12 +445,17 @@ class BDTOS_Object {
     foreach( $relationship_slugs as $relationship_slug ) {
     
       if( ! $this_is_child ) {
-        return toolset_disconnect_posts( $relationship_slug , $this->ID , $id );
+        $result = toolset_disconnect_posts( $relationship_slug , $this->ID , $id );
       }
 
-      return toolset_disconnect_posts( $relationship_slug , $id , $this->ID );
+      $result = toolset_disconnect_posts( $relationship_slug , $id , $this->ID );
       
     }
+    
+    $former_parent = new BDTOS_Object( $id );
+    $former_parent->clear_cache();
+    
+    return $result;
     
   }
   
@@ -442,6 +506,17 @@ class BDTOS_Object {
   public function rest_post_created_updated( $post , $request , $new ) {
     return true;
   }
+    
+    
+  /**
+  *
+  * After child post save
+  *
+  **/
+  
+  public function after_child_post_saved( $post_id ) {
+    return false;
+  }
   
   
   /**
@@ -466,6 +541,17 @@ class BDTOS_Object {
       }
     }
     
+  }
+  
+  
+  /**
+  *
+  * After WP All Import save
+  *
+  **/
+  
+  public function pmxi_saved_post( $post_id ) {
+    return false;
   }
   
   
@@ -574,6 +660,82 @@ class BDTOS_Object {
 		$taxonomies = $this->get_object_taxonomies();
 		return wp_get_object_terms( get_the_ID() , $taxonomies );
 	}
- 
   
+  
+  /**
+  *
+  * Get a cached request for this object
+  *
+  **/
+  
+  public function get_cached_request( $args = array() ) {
+    
+    if( ! apply_filters( 'bdtos_return_cache' , true ) ) {
+      return false;
+    }
+    
+    $key = 'bdtos-cache-' . hash_hmac( 'md5' , json_encode( $args ) , TOOLSET_CASH_SALT );
+    
+    $current_cache = get_post_meta( $this->ID , $key , true );
+    
+    if( $current_cache === '' ) {
+      return false;
+    }
+    
+    return $current_cache;
+    
+  }
+  
+  
+  /**
+  *
+  * Cache a request
+  *
+  **/
+  
+  public function cache_request( $args = array() , $value ) {
+    
+    $key = 'bdtos-cache-' . hash_hmac( 'md5' , json_encode( $args ) , TOOLSET_CASH_SALT );
+    
+    return update_post_meta( $this->ID , $key , $value );
+    
+  }
+  
+  
+  /**
+  *
+  * Clear all caches
+  *
+  **/
+  
+  public function clear_cache( $parents = true ) {
+    
+    global $wpdb;
+    
+    //first clear the cache for this object
+    $sql = "DELETE  FROM `wp_postmeta` WHERE `post_id` = " . $this->ID . " AND `meta_key` LIKE '%bdtos-cache-%'";
+    $wpdb->query( $sql );
+    
+    //then initiate the same for it's parents
+    $relationships = $this->get_linked_object_types( 'parent' );
+    
+    if( count( $relationships ) === 0 ) {
+      return false;
+    }
+    
+    foreach( $relationships as $post_type => $relationship ) {
+      
+      $parent = $this->get_parent_id( $post_type );
+      
+      if( $parent == 0 ) {
+        continue;
+      }
+      
+      $parent_object = gih_get_bdtos_object( $parent );
+      $parent_object->clear_cache();
+      
+    }
+    
+  }
+ 
 }

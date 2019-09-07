@@ -43,6 +43,9 @@ class BDTOS_Factory {
     add_action( 'after_trash_post' , array( $this , 'after_delete_post' ) , 10 , 1 );
     add_action( 'before_delete_post' , array( $this , 'after_delete_post' ) , 10 , 1 );
     
+    //take action when a post is saved by the WP All Import plugin
+    add_action( 'pmxi_saved_post' , array( $this , 'pmxi_saved_post' ) , 999 , 1 );
+    
     //register post types and classes
     add_action( 'init' , array( $this , 'register_class_names' ) , 10 );
     
@@ -55,6 +58,9 @@ class BDTOS_Factory {
        add_action( 'rest_after_insert_' . $post_type , array( $this , 'rest_post_created_updated' ) , 10 , 3 );
       }
     } , 99 );
+    
+    //after a child post is saved
+    add_action( 'wpcf_relationship_save_child' , array( $this , 'after_child_post_saved' ) , 999 , 2 );
     
   }
   
@@ -71,6 +77,7 @@ class BDTOS_Factory {
     $object = new $object_type( $post_id );
     $object->save_linked_field_values();
     $object->cred_submit_complete( $post_id , $form_data );
+    $object->clear_cache();
     
   }
   
@@ -86,6 +93,44 @@ class BDTOS_Factory {
     $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
     $object = new $object_type( $post_id );
     $object->after_post_save( $post_id );
+    $object->clear_cache();
+    
+  }
+  
+  
+  /**
+  *
+  * Take action when a post is saved, generically
+  *
+  **/
+  
+  public function after_child_post_saved( $post_id ) {
+    
+    $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
+    $object = new $object_type( $post_id );
+    $object->after_child_post_saved( $post_id );
+    $object->clear_cache();
+    
+  }
+  
+  
+  /**
+  *
+  * Take action when a post is updated by WP All Import
+  *
+  **/
+  
+  public function pmxi_saved_post( $post_id ) {
+    
+    $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
+    $object = new $object_type( $post_id );
+    
+    if( ! method_exists( $object , 'pmxi_saved_post' ) ) {
+      return;
+    }
+    
+    $object->pmxi_saved_post( $post_id );
+    $object->clear_cache();
     
   }
   
@@ -97,6 +142,10 @@ class BDTOS_Factory {
   **/
   
   public function after_delete_post( $post_id ) {
+    
+    if( ! apply_filters( 'bdtos_auto_delete_children' , false )) {
+      return;
+    }
     
     $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
     $object = new $object_type( $post_id );
