@@ -5,7 +5,7 @@
 * Plugin Name: Toolset Object Support
 * Plugin URI: https://github.com/dominic-ks/toolset-object-support
 * Description: This plugin houses provides a structure for common functions required when working with objects for post types created with Toolset Types
-* Version: 0.3.0
+* Version: 0.3.1
 * Author: Be Devious Web Development
 * Author URI: Plugin URI: https://www.bedevious.co.uk/
 * License: GNU GENERAL PUBLIC LICENSE V3
