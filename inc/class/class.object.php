@@ -180,6 +180,8 @@ class BDTOS_Object {
   
   public function save_linked_field_values() {
     
+    error_log( 'save_linked_field_values has been run for object #' . $this->ID );
+    
     $bespoke_fields = $this->get_bespoke_fields();
     
     foreach( $bespoke_fields as $field ) {
@@ -331,9 +333,7 @@ class BDTOS_Object {
     $objects_array = array();
     
     foreach( $objects as $object ) {
-      
-      $objects_array[] = new $output_object( $object->ID , $link );
-      
+      $objects_array[] = bdtos_get_bdtos( $object->ID );
     }
     
     $this->cache_request( $cache_args , $objects_array );
@@ -712,6 +712,10 @@ class BDTOS_Object {
     
     global $wpdb;
     
+    if( gettype( $this->ID ) !== 'integer' ) {
+      return;
+    }
+    
     //first clear the cache for this object
     $sql = "DELETE  FROM `wp_postmeta` WHERE `post_id` = " . $this->ID . " AND `meta_key` LIKE '%bdtos-cache-%'";
     $wpdb->query( $sql );
@@ -731,11 +735,24 @@ class BDTOS_Object {
         continue;
       }
       
-      $parent_object = gih_get_bdtos_object( $parent );
-      $parent_object->clear_cache();
+      wp_update_post( array(
+        'ID' => $parent,
+      ));
       
     }
     
   }
+  
+  
+  /**
+  *
+  * Get REST child post data
+  *
+  **/
+  
+  public function rest_get_child_post_data_value( $requesting_object ) {
+    return array();
+  }
+  
  
 }
