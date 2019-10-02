@@ -132,6 +132,8 @@ class BDTOS_Factory {
   
   public function rest_post_created_updated( $post , $request , $new ) {
     
+    remove_action( 'rest_pre_echo_response' , array( $this , 'rest_pre_echo_response' ) , 10 , 3 );
+    
     $object_type = $this->get_post_type_class( get_post_type( $post->ID ) );
     $object = new $object_type( $post->ID );
     return $object->rest_post_created_updated( $post , $request , $new );
