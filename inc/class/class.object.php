@@ -384,7 +384,7 @@ class BDTOS_Object {
   *
   **/
   
-  public function link_with_object( $id , $type , $this_is_child = true ) {
+  public function link_with_object( $id , $type = false , $this_is_child = true ) {
     
     if( $this_is_child ) {
       $link_types = 'parent';
@@ -392,6 +392,10 @@ class BDTOS_Object {
     
     if( ! $this_is_child ) {
       $link_types = 'child';
+    }
+    
+    if( ! $type ) {
+      $type = get_post_type( $id );
     }
     
     $relationships = $this->get_linked_object_types( $link_types );
