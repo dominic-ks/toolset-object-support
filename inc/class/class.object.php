@@ -586,6 +586,10 @@ class BDTOS_Object {
     
     global $wpdb;
     
+    if( gettype( $this->ID ) !== 'integer' ) {
+      return;
+    }
+    
     //first clear the cache for this object
     $sql = "DELETE  FROM `wp_postmeta` WHERE `post_id` = " . $this->ID . " AND `meta_key` LIKE '%bdtos-cache-%'";
     $wpdb->query( $sql );
