@@ -170,7 +170,7 @@ class BDTOS_Factory {
   
   public function rest_pre_echo_response( $response , $object , $request ) {
     
-    if( ! isset( $response['id'] ) ) {
+    if( ! is_array( $response ) || ! isset( $response['id'] ) ) {
       return $response;
     }
     
