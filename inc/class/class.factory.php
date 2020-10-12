@@ -456,6 +456,38 @@ class BDTOS_Factory {
   
   /**
   *
+  * Filter fields for the REST API
+  *
+  **/
+  
+  public function add_meta_filter_fields( $args, $request ) {
+    
+    $post_type = $args['post_type'];
+    $params = $request->get_params();
+    
+    foreach( $this->get_fields_by_post_type( $post_type ) as $name => $field_data ) {
+
+      $field_name = str_replace( '-' , '_' , $field_data['slug'] );
+
+      if( ! isset( $params[ $field_name ] )) {
+        continue;
+      }
+      
+      $args['meta_query'] = ( isset( $args['meta_query'] )) ? $args['meta_query'] : array();
+      $args['meta_query'][] = array(
+        'key' => 'wpcf-' . $field_data['slug'],
+        'value' => explode( ',' , $params[ $field_name ] ),
+      );
+      
+    }
+    
+    return $args;
+    
+  }
+  
+  
+  /**
+  *
   * Register REST field filters
   *
   **/
@@ -463,6 +495,7 @@ class BDTOS_Factory {
   public function register_rest_field_filters() {
     foreach( get_post_types() as $post_type ) {
       add_filter( 'rest_' . $post_type . '_query' , array( $this , 'add_parent_filter_fields' ) , 10 , 2 );  
+      add_filter( 'rest_' . $post_type . '_query' , array( $this , 'add_meta_filter_fields' ) , 10 , 2 );  
     }
   }
   
