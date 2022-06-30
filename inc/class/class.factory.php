@@ -41,7 +41,7 @@ class BDTOS_Factory {
     
     //take action when a post is deleted
     add_action( 'after_trash_post' , array( $this , 'after_delete_post' ) , 10 , 1 );
-    add_action( 'before_delete_post' , array( $this , 'after_delete_post' ) , 10 , 1 );
+    add_action( 'before_delete_post' , array( $this , 'before_delete_post' ) , 10 , 1 );
     
     //take action when a post is saved by the WP All Import plugin
     add_action( 'pmxi_saved_post' , array( $this , 'pmxi_saved_post' ) , 999 , 1 );
@@ -145,18 +145,33 @@ class BDTOS_Factory {
   
   /**
   *
+  * Take action before a post is deleted
+  *
+  **/
+  
+  public function before_delete_post( $post_id ) {    
+    $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
+    $object = new $object_type( $post_id );
+    $object->clear_cache();
+  }
+  
+  
+  /**
+  *
   * Take action after a post is deleted
   *
   **/
   
   public function after_delete_post( $post_id ) {
     
+    $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
+    $object = new $object_type( $post_id );
+    $object->clear_cache();
+        
     if( ! apply_filters( 'bdtos_auto_delete_children' , false )) {
       return;
     }
     
-    $object_type = $this->get_post_type_class( get_post_type( $post_id ) );
-    $object = new $object_type( $post_id );
     $object->after_delete_post( $post_id );
     
   }
@@ -277,6 +292,8 @@ class BDTOS_Factory {
               $return_array = array();
               
               foreach( $linked_objects as $linked_object ) {
+              
+                $linked_object = bdtos_get_bdtos( $linked_object->ID );
                 
                 $child_post_data = $linked_object->rest_get_child_post_data_value( $object->ID );
                 
@@ -324,8 +341,8 @@ class BDTOS_Factory {
       $relationships[ $post_type ] = toolset_get_related_post_types( 'parent' , $post_type );
     }
     
-    foreach( $relationships as $post_type => $relationship_array ) {
-      foreach( $relationship_array as $parent_post_type => $relationship_slugs ) {
+    foreach( $relationships as $post_type => $relationship_array ) {      
+      foreach( $relationship_array as $parent_post_type => $relationship_slugs ) {        
         foreach( $relationship_slugs as $relationship_slug ) {
           
           $field_name = str_replace( '-' , '_' , $parent_post_type ) . '_id';
@@ -338,7 +355,32 @@ class BDTOS_Factory {
             },
 
             'update_callback' => function( $value , $post , $fieldname ) {
-              return new WP_Error( 'relationship_error' , 'You cannot curently create relationships via Toolset Object Support REST API functionality' , array( 'status' => 404 ));
+
+              $object = bdtos_get_bdtos( $post->ID );
+              $parent_type = str_replace( '_id' , '' , $fieldname );
+
+              if( $object->get_parent_id( $parent_type ) !== 0 ) {
+                $unlink = $object->unlink_from_post( $object->get_parent_id( $parent_type ) , $parent_type );
+              }
+
+              if( $value === 0 ) {
+                return $value;
+              }
+
+              if( get_post_type( $value ) !== $parent_type ) {
+                return new WP_Error( 'wrong_type' , 'The post ID provided is not a ' . $parent_type . ' which is the required type for this field' , array( 'status' => 404 ) );
+              }
+
+              try {
+                $relationship = $object->link_with_object( $value , $parent_type );
+              }
+
+              catch( Exception $e ) {
+                return new WP_Error( 'relationship_error' , $e->getCode() . ': ' . $e->getMessage() , array( 'status' => 404 ) );
+              }
+
+              return $relationship;
+              
             },
 
             'schema' => array(
@@ -384,7 +426,32 @@ class BDTOS_Factory {
           },
 
           'update_callback' => function( $value , $post , $fieldname ) {
-            return new WP_Error( 'relationship_error' , 'You cannot update Toolset custom fields via Toolset Object Support REST API functionality' , array( 'status' => 404 ));
+          
+            /**
+            *
+            * Filter to allow disabling the updating of auto-registered meta fields in the API
+            *
+            **/
+
+            if( ! apply_filters( 'bdtos_allow_api_field_update' , true , $fieldname ) ) {
+              return new WP_Error( 'relationship_error' , 'You cannot update the field "' . $fieldname . '" directly' , array( 'status' => 404 ) );
+            }
+            
+            $fields = $this->get_fields_by_post_type( get_post_type( $post ));
+            $base_fieldname = str_replace( '_' , '-' , $fieldname );
+            $field = $fields[ $base_fieldname ];
+            $field_type = $field['type'];
+            $key = $field['meta_key'];
+
+            if( $field_type === 'boolean' || ( is_array( $field_type ) && in_array( 'boolean' , $field_type ) ) ) {
+              $value = ( $value ) ? '1' : '0';
+            }
+
+            do_action( 'bdtos_update_' . $fieldname . '_meta_field' , $post , $value );
+
+            // @todo we need to sanitize this value
+            return update_post_meta( $post->ID , $key , $value );
+            
           },
 
           'schema' => array(
