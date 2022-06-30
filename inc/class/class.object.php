@@ -256,8 +256,7 @@ class BDTOS_Object {
     $relationship_slugs = $relationships[ $parent_type ];
     $relationship_slug = $relationship_slugs[0];
     
-    return toolset_get_related_post( $this->ID , $relationship_slug , 'parent' , array( 'post_status' => array_merge(
-      get_post_statuses(), array( 'private' ))));
+    return toolset_get_related_post( $this->ID , $relationship_slug , 'parent' , array( 'post_status' => array_values( get_post_stati())));
     
   }
   
