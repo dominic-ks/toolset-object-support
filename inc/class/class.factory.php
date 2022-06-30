@@ -119,6 +119,7 @@ class BDTOS_Factory {
     
     $object_type = $this->get_post_type_class( get_post_type( $response['id'] ) );
     $object = new $object_type( $response['id'] );
+    
     return $object->rest_pre_echo_response( $response , $object , $request );
     
   }
@@ -134,6 +135,7 @@ class BDTOS_Factory {
     
     $object_type = $this->get_post_type_class( get_post_type( $post->ID ) );
     $object = new $object_type( $post->ID );
+    
     return $object->rest_post_created_updated( $post , $request , $new );
     
   }
