@@ -275,7 +275,8 @@ class BDTOS_Object {
   **/
   
   public function get_linked_objects( $type = null , $parent_type = null , $output_object = 'BDTOS_Object' , $args = array() , $link = false ) {
-    
+   
+    /**LEGACY CACHE CHECK**/
     $cache_args = array(
       'type' => $type,
       'parent_type' => $parent_type,
@@ -288,7 +289,28 @@ class BDTOS_Object {
     
     if( $cache_check !== false ) {
       return $cache_check;
+    }    
+    /**LEGACY CACHE CHECK**/
+   
+    /**NEW CACHE CHECK**/
+    $cache_args = array(
+      'args' => array(
+        'type' => $type,
+        'parent_type' => $parent_type,
+        'output_object' => $output_object,
+        'args' => $args,
+        'link' => $link,
+      ),
+      'args-type' => 'individual',
+      'function' => 'get_linked_objects',
+    );
+    
+    $cache_check = $this->get_cached_request( $cache_args );
+    
+    if( $cache_check !== false ) {
+      return $cache_check;
     }
+    /**NEW CACHE CHECK**/    
     
     if( ! $type ) {
       $type = 'any';
@@ -686,7 +708,7 @@ class BDTOS_Object {
       return false;
     }
     
-    return $current_cache;
+    return is_array( $current_cache ) && isset( $current_cache['bdtos-cache-value'] ) ? $current_cache['bdtos-cache-value'] : $current_cache;
     
   }
   
@@ -699,9 +721,15 @@ class BDTOS_Object {
   
   public function cache_request( $args = array() , $value ) {
     
-    $key = 'bdtos-cache-' . hash_hmac( 'md5' , json_encode( $args ) , TOOLSET_CASH_SALT );
+    $key = 'bdtos-cache-' . hash_hmac( 'md5' , json_encode( $args ) , TOOLSET_CASH_SALT );    
+    $cache_object = array(
+      'bdtos-cache-args' => $args,
+      'bdtos-cache-date' => strtotime( 'now' ),
+      'bdtos-cache-hash' => $key,
+      'bdtos-cache-value' => $value,
+    );
     
-    return update_post_meta( $this->ID , $key , $value );
+    return update_post_meta( $this->ID , $key , $cache_object );
     
   }
   
@@ -713,16 +741,13 @@ class BDTOS_Object {
   **/
   
   public function clear_cache( $parents = true ) {
-    
-    global $wpdb;
-    
+        
     if( gettype( $this->ID ) !== 'integer' ) {
       return;
     }
     
-    //first clear the cache for this object
-    $sql = "DELETE  FROM `wp_postmeta` WHERE `post_id` = " . $this->ID . " AND `meta_key` LIKE '%bdtos-cache-%'";
-    $wpdb->query( $sql );
+    // mark this object as ready for cache regeneration
+    update_post_meta( $this->ID , 'bdtos-cache-regen' , 'ready' );
     
     //then initiate the same for it's parents
     $relationships = $this->get_linked_object_types( 'parent' );
@@ -743,8 +768,180 @@ class BDTOS_Object {
         'ID' => $parent,
       ));
       
+    }    
+    
+  }
+  
+  
+  /**
+  *
+  * Regenerate caches
+  *
+  * @param void
+  * @return void
+  *
+  **/
+  
+  public function regenerate_caches() {
+    
+    // get all of the meta
+    $meta = get_post_meta( $this->ID );
+    
+    // simmer it down to cache items
+    $cache_items = array_filter( $meta , function( $key ) {
+      return strpos( $key , 'bdtos-cache-' ) === 0 && $key !== 'bdtos-cache-regen';
+    }, ARRAY_FILTER_USE_KEY );
+
+    // map to single values
+    $cache_items = array_map( function( $cache_item ) {
+      return maybe_unserialize( $cache_item[0] );
+    } , $cache_items );
+    
+    foreach( $cache_items as $cache_key => $cache_item ) {
+      
+      // simply delete legacy caches
+      if( ! is_array( $cache_item ) || ! isset( $cache_item['bdtos-cache-args'] )) {
+        delete_post_meta( $this->ID , $cache_key );
+        continue;
+      }
+      
+      // identify the method to be run
+      $method = $cache_item['bdtos-cache-args']['function'] ? $cache_item['bdtos-cache-args']['function'] : $cache_item['bdtos-cache-args']['method'];
+      
+      // if there is no method we'll bin the cache as it's invalid and can't be regenerated
+      if( ! $method || ! method_exists( $this , $method )) {
+        delete_post_meta( $this->ID , $cache_key );
+        continue;
+      }
+      
+      // if no args are provided run the method
+      if( ! isset( $cache_item['bdtos-cache-args']['args'] )) {
+        $this->$method();
+        continue;
+      }
+      
+      // if the args are not an array
+      if( ! is_array( $cache_item['bdtos-cache-args']['args'] )) {
+        call_user_func( array( $this , $method ) , $cache_item['bdtos-cache-args']['args'] );
+        continue;
+      }
+      
+      // if we have an array of args, but args-type is not set, or set to array, i.e. we're passing the array of args as a single arg
+      // NB. same code as previous check but split for easier reading of conditions
+      if( ! isset( $cache_item['bdtos-cache-args']['args-type'] ) || $cache_item['bdtos-cache-args']['args-type'] === 'array') {
+        call_user_func( array( $this , $method ) , $cache_item['bdtos-cache-args']['args'] );
+        continue;
+      }
+      
+      // otherwise here we're assuming that our array of args need to be passed as separate args
+      call_user_func_array( array( $this , $method ) , $cache_item['bdtos-cache-args']['args'] );
+      
     }
     
+    // delete as we're done with this regen
+    delete_post_meta( $this->ID , 'bdtos-cache-regen' );
+    
+  }
+    
+    
+  /**
+  *
+  * Get child post count for the REST API
+  *
+  * @param str $post_type the post type to get a count for
+  * @reurn int the number of attached child posts
+  *
+  **/
+
+  public function add_child_post_type_counts( $post_type ) {
+
+    $cache_args = array(
+      'function' => 'add_child_post_type_counts',
+      'args' => $post_type,
+    );
+
+    $cache_check = $this->get_cached_request( $cache_args );
+
+    if( $cache_check !== false ) {
+      return $cache_check;
+    }
+
+    $count = count( $this->get_linked_objects( $post_type ));
+    $this->cache_request( $cache_args , $count );  
+
+    return $count;
+
+  }
+
+
+  /**
+  *
+  * Get child posts for the REST API
+  *
+  * @param str $post_type the post type to get a count for
+  * @reurn int the attached child posts
+  *
+  **/
+
+  public function add_child_posts( $post_type ) {
+      
+    $cache_args = array(
+      'function' => 'add_child_posts',
+      'args' => $post_type,
+    );
+
+    $cache_check = $this->get_cached_request( $cache_args );
+
+    if( $cache_check !== false ) {
+      return $cache_check;
+    }
+
+    $linked_objects = $this->get_linked_objects( $post_type );
+    $return_array = array();
+
+    foreach( $linked_objects as $linked_object ) {
+
+      $linked_object = bdtos_get_bdtos( $linked_object->ID );
+      $child_post_data = $linked_object->rest_get_child_post_data_value( $this->ID );
+
+      if( ! empty( $child_post_data )) {
+        $return_array[] = $child_post_data;
+      }
+    }
+
+    $this->cache_request( $cache_args , $return_array );
+    return $return_array;
+
+  }
+
+
+  /**
+  *
+  * Get the parent post ID for the REST API
+  * 
+  * @param str $post_type the post type to get a count for
+  * @return int the parent post ID
+  *
+  **/
+
+  public function rest_add_parent_post_ids( $post_type ) {
+      
+    $cache_args = array(
+      'function' => 'rest_add_parent_post_ids',
+      'args' => $post_type,
+    );
+
+    $cache_check = $this->get_cached_request( $cache_args );
+
+    if( $cache_check !== false ) {
+      return $cache_check;
+    }
+
+    $parent_post_id = $this->get_parent_id( $post_type );
+    $this->cache_request( $cache_args , $parent_post_id );  
+    
+    return $parent_post_id;
+
   }
   
   

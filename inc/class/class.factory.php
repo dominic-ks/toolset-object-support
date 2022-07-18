@@ -232,14 +232,26 @@ class BDTOS_Factory {
     foreach( $relationships as $post_type => $relationship_array ) {
       foreach( $relationship_array as $child_post_type => $relationship_slugs ) {
         foreach( $relationship_slugs as $relationship_slug ) {
+              
+          if( ! apply_filters( 'bdtos_add_child_posts_count_to_rest' , false , $post_type , $child_post_type )) {
+            continue;
+          }
         
           $field_name = str_replace( '-' , '_' , $child_post_type ) . '_count';
 
           register_rest_field( $post_type , $field_name , array(
 
             'get_callback' => function( $object , $fieldname , $request , $type ) {
+              
               $object = bdtos_get_bdtos( $object['id'] );
-              return count( $object->get_linked_objects( str_replace( '_' , '-' , str_replace( '_count' , '' , $fieldname ))));
+              $post_type = str_replace( '_' , '-' , str_replace( '_count' , '' , $fieldname ));
+              
+              if( ! method_exists( $object , 'add_child_post_type_counts' )) {
+                return 0;
+              }
+              
+              return $object->add_child_post_type_counts( $post_type );
+              
             },
 
             'update_callback' => function( $value , $post , $fieldname ) {
@@ -279,6 +291,10 @@ class BDTOS_Factory {
     foreach( $relationships as $post_type => $relationship_array ) {
       foreach( $relationship_array as $child_post_type => $relationship_slugs ) {
         foreach( $relationship_slugs as $relationship_slug ) {
+              
+          if( ! apply_filters( 'bdtos_add_child_posts_to_rest' , false , $post_type , $child_post_type )) {
+            continue;
+          }
         
           $field_name = str_replace( '-' , '_' , $child_post_type );
 
@@ -287,23 +303,13 @@ class BDTOS_Factory {
             'get_callback' => function( $object , $fieldname , $request , $type ) {
               
               $object = bdtos_get_bdtos( $object['id'] );
-              $linked_objects = $object->get_linked_objects( str_replace( '_' , '-' , str_replace( '_count' , '' , $fieldname )));
+              $post_type = str_replace( '_' , '-' , str_replace( '_count' , '' , $fieldname ));
               
-              $return_array = array();
-              
-              foreach( $linked_objects as $linked_object ) {
-              
-                $linked_object = bdtos_get_bdtos( $linked_object->ID );
-                
-                $child_post_data = $linked_object->rest_get_child_post_data_value( $object->ID );
-                
-                if( ! empty( $child_post_data )) {
-                  $return_array[] = $child_post_data;
-                }
-                
+              if( ! method_exists( $object , 'add_child_posts' )) {
+                return [];
               }
               
-              return $return_array;
+              return $object->add_child_posts( $post_type );
               
             },
 
@@ -344,14 +350,26 @@ class BDTOS_Factory {
     foreach( $relationships as $post_type => $relationship_array ) {      
       foreach( $relationship_array as $parent_post_type => $relationship_slugs ) {        
         foreach( $relationship_slugs as $relationship_slug ) {
+              
+          if( ! apply_filters( 'bdtos_add_parent_post_id_to_rest' , false , $post_type , $parent_post_type )) {
+            continue;
+          }
           
           $field_name = str_replace( '-' , '_' , $parent_post_type ) . '_id';
 
           register_rest_field( $post_type , $field_name , array(
 
             'get_callback' => function( $object , $fieldname , $request , $type ) {
+              
               $object = bdtos_get_bdtos( $object['id'] );
-              return $object->get_parent_id( str_replace( '_' , '-' , str_replace( '_id' , '' , $fieldname )));
+              $post_type = str_replace( '_' , '-' , str_replace( '_id' , '' , $fieldname ));
+              
+              if( ! method_exists( $object , 'rest_add_parent_post_ids' )) {
+                return 0;
+              }
+              
+              return $object->rest_add_parent_post_ids( $post_type );
+              
             },
 
             'update_callback' => function( $value , $post , $fieldname ) {
@@ -592,6 +610,41 @@ class BDTOS_Factory {
   
   public function register_class_names() {
     $this->object_types = apply_filters( 'bdtos_object_types' , array() );
+  }
+  
+  
+  /**
+  *
+  * Run cache regeneration
+  *
+  * @param void
+  * @return void
+  *
+  **/
+  
+  public function run_cache_regeneration() {
+    
+    add_filter( 'bdtos_return_cache' , function() {
+      return false;
+    });
+    
+    $posts = get_posts( array(
+      'posts_per_page' => -1,
+      'post_type' => 'any',
+      'post_status' => 'any',
+      'meta_query' => array(
+        array(
+          'key' => 'bdtos-cache-regen',
+          'value' => 'ready',
+        ),
+      ),
+    ));
+
+    foreach( $posts as $post ) {
+      $object = bdtos_get_bdtos( $post->ID );
+      $object->regenerate_caches();
+    }
+    
   }
   
   
