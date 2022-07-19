@@ -749,6 +749,9 @@ class BDTOS_Object {
     // mark this object as ready for cache regeneration
     update_post_meta( $this->ID , 'bdtos-cache-regen' , 'ready' );
     
+    // set the options flag so we know it's pending...
+    update_option( 'bdtos-cache-regen' , 'ready' );
+    
     //then initiate the same for it's parents
     $relationships = $this->get_linked_object_types( 'parent' );
     

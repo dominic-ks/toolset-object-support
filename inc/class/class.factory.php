@@ -624,6 +624,7 @@ class BDTOS_Factory {
   
   public function run_cache_regeneration() {
     
+    update_option( 'bdtos-cache-regen' , 'running' );
     add_filter( 'bdtos_return_cache' , function() {
       return false;
     });
@@ -640,10 +641,18 @@ class BDTOS_Factory {
       ),
     ));
 
-    foreach( $posts as $post ) {
-      $object = bdtos_get_bdtos( $post->ID );
-      $object->regenerate_caches();
+    try {
+      
+      foreach( $posts as $post ) {
+        $object = bdtos_get_bdtos( $post->ID );
+        $object->regenerate_caches();
+      }
+      
+    } catch( Exception $e ) {
+      error_log( $e->getMessage());
     }
+    
+    update_option( 'bdtos-cache-regen' , 'done' );
     
   }
   
