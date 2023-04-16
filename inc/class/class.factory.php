@@ -465,6 +465,7 @@ class BDTOS_Factory {
               $value = ( $value ) ? '1' : '0';
             }
 
+            $value = apply_filters( 'bdtos_update_' . $fieldname . '_meta_field_value' , $value , $post );
             do_action( 'bdtos_update_' . $fieldname . '_meta_field' , $post , $value );
 
             // @todo we need to sanitize this value
